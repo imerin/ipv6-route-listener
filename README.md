@@ -33,6 +33,9 @@ This project provides a workaround by:
 
     # Or specify a custom interface
     ./run.sh -i wlan0
+
+    # Enable logging of ignored routes
+    ./run.sh --log-ignored
     ```
 
 ## 🐍 Local Development
@@ -59,6 +62,9 @@ If you're not using Docker:
 
     # Or specify a custom interface
     poetry run python -m route_listener.main -i wlan0
+
+    # Enable logging of ignored routes
+    poetry run python -m route_listener.main --log-ignored
     ```
 
 ## 💡 How It Works
@@ -68,12 +74,18 @@ If you're not using Docker:
    - Extracts ULA prefixes and routes from the advertisements
    - Each route is processed only once (subsequent advertisements for the same route are ignored)
 
-2. **Route Configuration:**
-   - When a new route is detected, an external script (`thread-route.sh`) is called
+2. **Route Filtering:**
+   - Only ULA prefixes (starting with 'fd') are configured
+   - Non-ULA prefixes are ignored by default
+   - You can enable logging of ignored routes with the `--log-ignored` option
+   - **Why only ULA prefixes?** Matter/Thread devices use ULA (Unique Local Address) prefixes for their internal communication. These prefixes are guaranteed to be unique and are not routable on the public internet, making them ideal for local network communication. By filtering for only ULA prefixes, we ensure we're only configuring routes that are relevant for Matter/Thread device communication.
+
+3. **Route Configuration:**
+   - When a new ULA route is detected, an external script (`thread-route.sh`) is called
    - The script uses the `ip` command to add the route to the kernel
    - Existing routes with the same prefix are removed before adding the new one
 
-3. **Interface Configuration:**
+4. **Interface Configuration:**
    - By default, the script listens on the `eth0` interface
    - You can specify a different interface using the `-i` option
    - The script will abort if the specified interface doesn't exist
@@ -91,8 +103,12 @@ If you're not using Docker:
 [2023-04-19 10:15:35]   ➕ Adding route to fd00:1234:5678::/64 via fe80::1234:5678:9abc:def0 on eth0
 [2023-04-19 10:15:35]   ✅ Added
 [2023-04-19 10:15:40] 🔔 Router Advertisement from fe80::1234:5678:9abc:def0
-[2023-04-19 10:15:40]   📡 Prefix: fd00:1234:5678::/64
-[2023-04-19 10:15:40]   ⏭️  Route already configured: fd00:1234:5678::/64 via fe80::1234:5678:9abc:def0
+[2023-04-19 10:15:40]   📡 Prefix: 2001:db8::/64
+[2023-04-19 10:15:40]   ⏭️  Ignoring non-ULA prefix: 2001:db8::/64 via fe80::1234:5678:9abc:def0
+[2023-04-19 10:15:40]   ℹ️  Only ULA prefixes (starting with 'fd') are configured for Matter/Thread device communication
+[2023-04-19 10:15:45] 🔔 Router Advertisement from fe80::1234:5678:9abc:def0
+[2023-04-19 10:15:45]   📡 Prefix: fd00:1234:5678::/64
+[2023-04-19 10:15:45]   ⏭️  Route already configured: fd00:1234:5678::/64 via fe80::1234:5678:9abc:def0
 ```
 
 ## 📜 History

@@ -21,9 +21,14 @@ BANNER = """
 # Track seen routes to avoid duplicate processing
 seen_routes = set()
 
-def log(message, prefix=""):
-    """Log a message with a timestamp."""
+def log(message, prefix="", level="info"):
+    """Log a message with a timestamp and level."""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Skip ignored routes if log_ignored is False
+    if level == "ignored" and not args.log_ignored:
+        return
+        
     print(f"[{timestamp}] {prefix}{message}")
 
 def configure_route(prefix, router, iface):
@@ -38,6 +43,13 @@ def configure_route(prefix, router, iface):
     if route_key in seen_routes:
         log(f"⏭️  Route already configured: {prefix} via {router}", "  ")
         return True
+    
+    # Check if the prefix is a ULA prefix (starts with 'fd')
+    if not prefix.startswith("fd"):
+        log(f"⏭️  Ignoring non-ULA prefix: {prefix} via {router}", "  ", "ignored")
+        log(f"   ℹ️  Only ULA prefixes (starting with 'fd') are configured for Matter/Thread device communication", "  ", "ignored")
+        log(f"   ℹ️  ULA prefixes are used for local network communication and are not routable on the public internet", "  ", "ignored")
+        return False
     
     log(f"🔧 Configuring new route: {prefix} via {router}", "  ")
     
@@ -95,13 +107,11 @@ def handle_packet(packet):
     
     # Configure routes for each prefix
     for prefix in prefixes:
-        if prefix.startswith("fd"):  # ULA prefix
-            configure_route(prefix, src, args.interface)
+        configure_route(prefix, src, args.interface)
     
     # Configure routes for each route
     for route in routes:
-        if route.startswith("fd"):  # ULA route
-            configure_route(route, src, args.interface)
+        configure_route(route, src, args.interface)
 
 def main():
     """Main entry point for the RA listener."""
@@ -109,6 +119,8 @@ def main():
     parser = argparse.ArgumentParser(description="ICMPv6 RA listener for Thread route monitoring")
     parser.add_argument("-i", "--interface", default="eth0", 
                         help="Network interface to listen on (default: eth0)")
+    parser.add_argument("--log-ignored", action="store_true",
+                        help="Log ignored routes (non-ULA prefixes)")
     global args
     args = parser.parse_args()
     
@@ -118,6 +130,7 @@ def main():
     log("🔍 System Information:")
     log(f"  Python version: {sys.version}")
     log(f"  Scapy version: {conf.version}")
+    log(f"  Log ignored routes: {'Yes' if args.log_ignored else 'No'}")
     
     # List available interfaces
     interfaces = get_if_list()
