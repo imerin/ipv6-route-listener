@@ -1,76 +1,63 @@
 #!/usr/bin/env python3
-"""Main module for the ICMPv6 RA listener."""
+"""Main module for the ICMPv6 RA Listener."""
 
-import sys
 import argparse
-from scapy.all import sniff, conf, get_if_list
-
-from .logger import Logger, LoggerConfig
+import sys
+import platform
+import logging
+from scapy.all import get_if_list, conf
+from .logger import Logger
 from .route_configurator import RouteConfigurator
 from .packet_handler import PacketHandler
 
-# Banner for the application
-BANNER = """
+# Version and build information
+VERSION = "0.1.0"
+BUILD_NUMBER = "1"
+
+def main():
+    """Main entry point for the application."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="ICMPv6 RA Listener for IPv6 route configuration")
+    parser.add_argument("-i", "--interface", default="eth0", help="Network interface to monitor")
+    parser.add_argument("--log-ignored", action="store_true", help="Log ignored routes")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    args = parser.parse_args()
+    
+    # Create logger
+    logger = Logger(log_ignored=args.log_ignored)
+    
+    # Enable debug logging if requested
+    if args.debug:
+        logger._logger.setLevel(logging.DEBUG)
+        logger.debug("Debug logging enabled")
+    
+    # Display banner
+    logger.banner(f"""
 ╔════════════════════════════════════════════════════════════════════════════╗
-║                     🚀 ICMPv6 RA Listener v0.1.0                          ║
+║                     🚀 ICMPv6 RA Listener v{VERSION} (build={BUILD_NUMBER})                          ║
 ║                                                                          ║
 ║  Monitors Thread Border Routers for IPv6 Router Advertisements           ║
 ║  and displays ULA prefixes and routes for network configuration          ║
 ╚════════════════════════════════════════════════════════════════════════════╝
-"""
-
-def main():
-    """Main entry point for the RA listener."""
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="ICMPv6 RA listener for Thread route monitoring")
-    parser.add_argument("-i", "--interface", default="eth0", 
-                        help="Network interface to listen on (default: eth0)")
-    parser.add_argument("--log-ignored", action="store_true",
-                        help="Log ignored routes (non-ULA prefixes)")
-    args = parser.parse_args()
-
-    # Initialize components
-    logger = Logger(LoggerConfig(log_ignored=args.log_ignored))
-    configurator = RouteConfigurator(logger)
-    handler = PacketHandler(configurator, logger, args.interface)
-
-    logger.banner(BANNER)
-
-    # Print system information
+""")
+    
+    # Display system information
     logger.info("🔍 System Information:")
-    logger.info(f"  Python version: {sys.version}")
+    logger.info(f"  Python version: {platform.python_version()} ({platform.python_implementation()}, {platform.python_compiler()})")
     logger.info(f"  Scapy version: {conf.version}")
     logger.info(f"  Log ignored routes: {'Yes' if args.log_ignored else 'No'}")
-
-    # List available interfaces
-    interfaces = get_if_list()
-    logger.info(f"  Available interfaces: {', '.join(interfaces)}")
-
-    # Check if the specified interface exists
-    if not interfaces:
-        logger.error("❌ No network interfaces found!")
-        return 1
-
-    if args.interface not in interfaces:
-        logger.error(f"❌ Error: Interface '{args.interface}' not found!")
-        logger.error("  Please specify a valid interface using the -i option.")
-        logger.error(f"  Available interfaces: {', '.join(interfaces)}")
-        return 1
-
-    logger.info(f"📡 Listening for Router Advertisements on interface '{args.interface}'...")
-    logger.info("Press Ctrl+C to stop")
-
-    # Force output to be flushed immediately
-    sys.stdout.flush()
-
-    try:
-        # Start sniffing
-        sniff(filter="icmp6", iface=args.interface, prn=handler.handle)
-    except KeyboardInterrupt:
-        logger.info("👋 Stopping RA listener...")
-    except Exception as e:
-        logger.error(f"❌ Error: {e}")
-        return 1
+    logger.info(f"  Debug logging: {'Yes' if args.debug else 'No'}")
+    logger.info(f"  Available interfaces: {', '.join(get_if_list())}")
+    
+    # Initialize route configurator
+    configurator = RouteConfigurator(logger, interface=args.interface)
+    
+    # Initialize packet handler
+    handler = PacketHandler(args.interface, configurator, logger)
+    
+    # Start listening for packets
+    handler.start()
+    
     return 0
 
 if __name__ == "__main__":

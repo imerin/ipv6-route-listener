@@ -1,17 +1,18 @@
 [tool.poetry]
 name = "route-listener"
 version = "0.1.0"
-description = "ICMPv6 RA listener for Thread route monitoring"
-authors = ["Your Name"]
+description = "ICMPv6 RA Listener for IPv6 route configuration"
+authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
 packages = [{include = "route_listener"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 scapy = "^2.5.0"
+netifaces = "^0.11.0"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]

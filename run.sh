@@ -36,7 +36,7 @@ cleanup() {
 trap cleanup SIGINT SIGTERM EXIT
 
 # Build the Docker image
-echo "🏗️  Building Docker image..."
+echo "🏗️  Building Docker image... "
 docker build -t $IMAGE_NAME .
 
 # Check if container is already running and stop it

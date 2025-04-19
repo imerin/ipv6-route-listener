@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  route-listener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: route-listener-container
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - .:/app
+    command: python -u -m route_listener.main -i eth0 --debug 

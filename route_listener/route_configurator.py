@@ -6,6 +6,7 @@ import re
 from typing import Optional, Dict, Set
 from dataclasses import dataclass
 from .logger import Logger
+from .router_discovery import RouterDiscovery
 
 @dataclass
 class Route:
@@ -23,82 +24,64 @@ class Route:
     
     def get_route_key(self) -> str:
         """Get a unique key for this route."""
-        return f"{self.prefix}|{self.router}"
+        # Remove any existing prefix length notation
+        base_prefix = self.prefix.split('/')[0]
+        return f"{base_prefix}|{self.router}"
 
 class RouteConfigurator:
-    """Handles the configuration of IPv6 routes."""
-
-    def __init__(self, logger: Logger):
-        """Initialize the route configurator."""
+    """Handles IPv6 route configuration."""
+    
+    def __init__(self, logger: Logger, interface: str = "eth0"):
+        """Initialize route configurator.
+        
+        Args:
+            logger: Logger instance for output
+            interface: Network interface to use (default: eth0)
+        """
         self.logger = logger
-        self.seen_routes: Dict[str, str] = {}  # prefix -> router mapping
-        self._configure_script()
-
-    def _configure_script(self):
-        """Configure the route configuration script."""
-        # Get the script path relative to this file
-        self.script_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            "bin",
-            "configure-ipv6-route.sh"
-        )
-        # Make sure the script is executable
-        if os.path.exists(self.script_path):
-            os.chmod(self.script_path, 0o755)
-
-    def configure(self, route: Route) -> bool:
-        """Configure a route on the host system."""
-        if not route.prefix or not route.router:
-            return False
-
-        # Check if this is a ULA prefix
-        if not route.is_ula():
-            self.logger.ignored(f"⏭️  Ignoring non-ULA prefix: {route}")
-            self.logger.ignored(f"   ℹ️  Only ULA prefixes (starting with 'fd') are configured for Matter/Thread device communication")
-            self.logger.ignored(f"   ℹ️  ULA prefixes are used for local network communication and are not routable on the public internet")
-            return False
-
-        # Check if we've already processed this exact route
-        route_key = route.get_route_key()
+        self.interface = interface
+        self.seen_routes = set()
+        
+        # Initialize router discovery
+        discovery = RouterDiscovery(interface, logger)
+        discovery.discover_routers()
+        
+    def configure(self, prefix: str, prefix_len: int) -> None:
+        """Configure a route for the given prefix.
+        
+        Args:
+            prefix: IPv6 prefix to configure
+            prefix_len: Prefix length
+        """
+        # Skip if we've seen this route before
+        route_key = self.get_route_key(prefix)
         if route_key in self.seen_routes:
-            self.logger.info(f"⏭️  Route already configured: {route}")
-            return True
-
-        # Check if we've seen this prefix before with a different router
-        if route.prefix in self.seen_routes:
-            previous_router = self.seen_routes[route.prefix]
-            self.logger.info(f"🔄 Updating route: {route} (previous: {previous_router})")
+            self.logger.info(f"⏭️  Route already configured: {prefix}/{prefix_len}")
+            return
             
-            # The script will handle removing the previous route
-        else:
-            self.logger.info(f"🔧 Configuring new route: {route}")
-
+        self.logger.info(f"🔧 Configuring route for {prefix}/{prefix_len}")
+        
+        # Run the shell script to configure the route
+        script_path = os.path.join(os.path.dirname(__file__), "..", "bin", "configure-ipv6-route.sh")
         try:
-            # Run the script with the route parameters
             result = subprocess.run(
-                [self.script_path],
-                env={
-                    "PREFIX": route.prefix,
-                    "ROUTER": route.router,
-                    "IFACE": route.interface,
-                    **os.environ
-                },
+                [script_path, prefix, str(prefix_len), self.interface],
                 capture_output=True,
                 text=True,
                 check=True
             )
-
-            self.logger.info(f"✅ Route configuration output:\n{result.stdout}")
-
-            # Update seen routes - store both the full route key and just the prefix
-            self.seen_routes[route_key] = route.router
-            self.seen_routes[route.prefix] = route.router
-            return True
-
+            self.logger.info(f"✅ Route configured successfully: {result.stdout}")
+            self.seen_routes.add(route_key)
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"❌ Error configuring route: {e}")
-            self.logger.error(f"Error output: {e.stderr}")
-            return False
-        except Exception as e:
-            self.logger.error(f"❌ Unexpected error: {e}")
-            return False 
+            self.logger.error(f"❌ Failed to configure route: {e.stderr}")
+            
+    def get_route_key(self, prefix: str) -> str:
+        """Generate a unique key for a route.
+        
+        Args:
+            prefix: IPv6 prefix
+            
+        Returns:
+            A unique string key for the route
+        """
+        return f"{prefix}_{self.interface}" 

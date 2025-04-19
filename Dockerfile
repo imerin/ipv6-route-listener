@@ -3,6 +3,7 @@ FROM python:3.11-slim
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     tcpdump iproute2 libcap2-bin \
+    gcc python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set workdir
@@ -22,8 +23,8 @@ COPY . .
 # Install the project itself
 RUN poetry install --no-interaction
 
-# Make the thread-route.sh script executable
-RUN chmod +x thread-route.sh
+# Make the configure-ipv6-route.sh script executable
+RUN chmod +x bin/configure-ipv6-route.sh
 
 # Enable low-level packet capture (needed for scapy)
 RUN setcap cap_net_raw,cap_net_admin=eip $(readlink -f $(which python3))
