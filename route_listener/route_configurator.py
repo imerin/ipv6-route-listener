@@ -2,7 +2,8 @@
 
 import os
 import subprocess
-from typing import Optional, Dict
+import re
+from typing import Optional, Dict, Set
 from dataclasses import dataclass
 from .logger import Logger
 
@@ -19,6 +20,10 @@ class Route:
     def is_ula(self) -> bool:
         """Check if this is a ULA prefix (starts with 'fd')."""
         return self.prefix.startswith("fd")
+    
+    def get_route_key(self) -> str:
+        """Get a unique key for this route."""
+        return f"{self.prefix}|{self.router}"
 
 class RouteConfigurator:
     """Handles the configuration of IPv6 routes."""
@@ -54,7 +59,7 @@ class RouteConfigurator:
             return False
 
         # Check if we've already processed this exact route
-        route_key = f"{route.prefix}|{route.router}"
+        route_key = route.get_route_key()
         if route_key in self.seen_routes:
             self.logger.info(f"⏭️  Route already configured: {route}")
             return True
@@ -63,6 +68,8 @@ class RouteConfigurator:
         if route.prefix in self.seen_routes:
             previous_router = self.seen_routes[route.prefix]
             self.logger.info(f"🔄 Updating route: {route} (previous: {previous_router})")
+            
+            # The script will handle removing the previous route
         else:
             self.logger.info(f"🔧 Configuring new route: {route}")
 

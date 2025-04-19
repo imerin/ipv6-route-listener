@@ -20,11 +20,20 @@ fi
 # Configure the route
 echo "🔍 Configuring route: $PREFIX via $ROUTER on interface $IFACE"
 
-# Check if route already exists and remove it
-ip -6 route show | grep -q "$PREFIX" && {
-    echo "🧹 Removing existing route to $PREFIX"
-    ip -6 route del "$PREFIX" 2>/dev/null || true
-}
+# Remove any existing routes for this prefix
+# This includes both exact matches and higher-order subnets
+echo "🧹 Removing any existing routes for $PREFIX and its subnets"
+
+# First, try to remove the exact route if it exists
+ip -6 route del "$PREFIX" via "$ROUTER" dev "$IFACE" 2>/dev/null || true
+
+# Then, try to remove any routes with prefix length notation
+# Extract the prefix without any length notation
+BASE_PREFIX=$(echo "$PREFIX" | sed 's/\/.*$//')
+# Try common prefix lengths
+for LENGTH in 64 48 32 16; do
+    ip -6 route del "$BASE_PREFIX/$LENGTH" 2>/dev/null || true
+done
 
 # Add the new route
 echo "➕ Adding route to $PREFIX via $ROUTER on $IFACE"
