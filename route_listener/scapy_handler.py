@@ -93,23 +93,57 @@ class ScapyPacketHandler(BasePacketHandler):
                 self.logger.debug(f"🔍 Processing option: {type(opt).__name__}")
                 
                 if isinstance(opt, ICMPv6NDOptPrefixInfo):
-                    prefix_str = str(opt.prefix)
-                    prefix_len = opt.prefixlen
-                    self.logger.debug(f"🔍 Found prefix: {prefix_str}/{prefix_len}")
-                    if prefix_str.startswith("fd"):
-                        self.logger.debug(f"🔍 Found ULA prefix: {prefix_str}/{prefix_len}")
-                        self._process_ula_prefix(prefix_str, prefix_len, packet[IPv6].src)
-                    else:
-                        self.logger.debug(f"⏭️  Ignoring non-ULA prefix: {prefix_str}/{prefix_len}")
+                    try:
+                        prefix_str = str(opt.prefix)
+                        prefix_len = opt.prefixlen
+                        self.logger.debug(f"🔍 Found prefix: {prefix_str}/{prefix_len}")
+                        if prefix_str.startswith("fd"):
+                            self.logger.debug(f"🔍 Found ULA prefix: {prefix_str}/{prefix_len}")
+                            self._process_ula_prefix(prefix_str, prefix_len, packet[IPv6].src)
+                        else:
+                            self.logger.debug(f"⏭️  Ignoring non-ULA prefix: {prefix_str}/{prefix_len}")
+                    except AttributeError as e:
+                        self.logger.error(f"❌ Error processing prefix option: Missing required attribute - {str(e)}")
+                        self.logger.debug(f"Option data: {opt}")
                 elif isinstance(opt, ICMPv6NDOptRouteInfo):
-                    prefix_str = str(opt.prefix)
-                    prefix_len = opt.prefixlen
-                    self.logger.debug(f"🔍 Found route: {prefix_str}/{prefix_len}")
-                    if prefix_str.startswith("fd"):
-                        self.logger.debug(f"🔍 Found ULA route: {prefix_str}/{prefix_len}")
-                        self._process_ula_route(prefix_str, prefix_len, packet[IPv6].src)
-                    else:
-                        self.logger.debug(f"⏭️  Ignoring non-ULA route: {prefix_str}/{prefix_len}")
+                    try:
+                        # Log the raw option data for debugging
+                        self.logger.debug(f"Route option data: {opt}")
+                        
+                        # Try to get the prefix first
+                        try:
+                            prefix_str = str(opt.prefix)
+                            self.logger.debug(f"Found prefix: {prefix_str}")
+                        except AttributeError:
+                            self.logger.error("❌ Error: Route option missing 'prefix' attribute")
+                            self.logger.debug(f"Available attributes: {dir(opt)}")
+                            continue
+                            
+                        # Try to get the prefix length
+                        try:
+                            prefix_len = opt.prefixlen
+                            self.logger.debug(f"Found prefix length: {prefix_len}")
+                        except AttributeError:
+                            # Try alternative attribute names for prefix length
+                            if hasattr(opt, 'plen'):
+                                prefix_len = opt.plen
+                                self.logger.debug(f"Found prefix length using 'plen' attribute: {prefix_len}")
+                            else:
+                                self.logger.error(f"❌ Error: Route option missing 'prefixlen' attribute for prefix {prefix_str}")
+                                self.logger.debug(f"Available attributes: {dir(opt)}")
+                                continue
+                            
+                        # Process the route if we have both prefix and prefix length
+                        self.logger.debug(f"🔍 Found route: {prefix_str}/{prefix_len}")
+                        if prefix_str.startswith("fd"):
+                            self.logger.debug(f"🔍 Found ULA route: {prefix_str}/{prefix_len}")
+                            self._process_ula_route(prefix_str, prefix_len, packet[IPv6].src)
+                        else:
+                            self.logger.debug(f"⏭️  Ignoring non-ULA route: {prefix_str}/{prefix_len}")
+                    except Exception as e:
+                        self.logger.error(f"❌ Error processing route option: {str(e)}")
+                        self.logger.debug(f"Option data: {opt}")
+                        self.logger.debug(f"Available attributes: {dir(opt)}")
                 else:
                     self.logger.debug(f"⏭️  Ignoring option type: {type(opt).__name__}")
                     
