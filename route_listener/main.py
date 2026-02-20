@@ -2,7 +2,6 @@
 """Main module for the ICMPv6 RA Listener."""
 
 import argparse
-import sys
 import platform
 import logging
 from scapy.all import get_if_list, conf

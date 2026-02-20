@@ -14,4 +14,4 @@ services:
       - .:/app     # Mount source code for development and hot-reloading
     environment:
       - PYTHONUNBUFFERED=1  # Ensure Python output is not buffered for real-time logs
-    command: bin/start.sh -i eth0
+    command: python -u -m route_listener.main -i eth0 --enable-rs
