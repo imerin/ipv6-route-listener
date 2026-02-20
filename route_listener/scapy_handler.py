@@ -76,7 +76,7 @@ class ScapyPacketHandler:
             self.route_configurator.process_packet_info(packet_info)
             
             # Log successful processing
-            self.logger.info("✅ Processed Router Advertisement")
+            self.logger.debug("✅ Processed Router Advertisement")
             
         except Exception as e:
             self.logger.error(f"❌ Error processing packet: {str(e)}")

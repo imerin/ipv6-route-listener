@@ -152,10 +152,10 @@ class RouteConfigurator:
         # Skip if we've seen this route before
         route_key = route.get_route_key()
         if route_key in self.seen_routes:
-            self.logger.info(f"⏭️  {'Prefix' if is_prefix else 'Route'} already configured: {prefix}/{prefix_len}")
+            self.logger.debug(f"⏭️  {'Prefix' if is_prefix else 'Route'} already configured: {prefix}/{prefix_len}")
             return
             
-        self.logger.info(f"🔧 Configuring {'prefix' if is_prefix else 'route'} for {prefix}/{prefix_len}")
+        self.logger.critical(f"🔧 Configuring {'prefix' if is_prefix else 'route'} for {prefix}/{prefix_len}")
         
         # Execute the route configuration
         if self.executor.execute(route, prefix_len):
