@@ -4,7 +4,6 @@ from scapy.all import (
     ICMPv6ND_RA,
     ICMPv6NDOptPrefixInfo,
     ICMPv6NDOptRouteInfo,
-    IPv6
 )
 
 class PacketFilter:

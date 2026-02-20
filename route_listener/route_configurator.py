@@ -2,8 +2,6 @@
 
 import os
 import subprocess
-import re
-from typing import Optional, Dict, Set
 from dataclasses import dataclass
 from .logger import Logger
 

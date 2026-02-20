@@ -35,5 +35,5 @@ class RouterSolicitor:
                 self.logger.info("📤 Router Solicitation sent")
                 
         except Exception as e:
-            if self.logger and self.logger.verbose:
+            if self.logger:
                 self.logger.error(f"❌ Error sending Router Solicitation: {str(e)}") 

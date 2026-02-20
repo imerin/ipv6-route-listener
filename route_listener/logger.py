@@ -2,9 +2,6 @@
 
 import logging
 import sys
-import os
-from datetime import datetime
-from typing import Optional
 from logging.handlers import RotatingFileHandler
 
 class Logger:

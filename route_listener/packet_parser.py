@@ -1,7 +1,6 @@
 """Packet parsing for Router Advertisements."""
 
 from scapy.all import IPv6, ICMPv6ND_RA, ICMPv6NDOptPrefixInfo, ICMPv6NDOptRouteInfo
-from .route_info import RouteInfo
 
 class PacketParser:
     """Handles parsing of Router Advertisement packets."""

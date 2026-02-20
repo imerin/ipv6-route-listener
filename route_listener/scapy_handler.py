@@ -1,6 +1,6 @@
 """Scapy packet handling for IPv6 Router Advertisements."""
 
-from scapy.all import sniff, IPv6, ICMPv6ND_RA, ICMPv6NDOptPrefixInfo, ICMPv6NDOptRouteInfo
+from scapy.all import sniff, IPv6, ICMPv6ND_RA
 from .route_configurator import RouteConfigurator
 from .logger import Logger
 from .packet_parser import PacketParser
