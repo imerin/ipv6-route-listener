@@ -155,7 +155,7 @@ class RouteConfigurator:
             self.logger.debug(f"⏭️  {'Prefix' if is_prefix else 'Route'} already configured: {prefix}/{prefix_len}")
             return
             
-        self.logger.critical(f"🔧 Configuring {'prefix' if is_prefix else 'route'} for {prefix}/{prefix_len}")
+        self.logger.info(f"🔧 Configuring {'prefix' if is_prefix else 'route'} for {prefix}/{prefix_len}")
         
         # Execute the route configuration
         if self.executor.execute(route, prefix_len):
