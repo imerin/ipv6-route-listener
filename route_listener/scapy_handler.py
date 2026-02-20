@@ -36,7 +36,7 @@ class ScapyPacketHandler:
         
         # Send Router Solicitation if enabled
         if self.router_solicitor:
-            self.router_solicitor.send()
+            self.router_solicitor.send_solicitation()
         
         # Start sniffing for Router Advertisements
         sniff(
